@@ -1,0 +1,209 @@
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/build.py idapython-1.0.0-free-1/build.py
+--- idapython-1.0.0-original/build.py	2008-09-28 16:57:20 +0200
++++ idapython-1.0.0-free-1/build.py	2015-02-19 20:34:27 +0100
+@@ -20,11 +20,11 @@
+ from distutils import sysconfig
+ 
+ # Start of user configurable options
+ VERBOSE = True
+ IDA_MAJOR_VERSION = 5
+-IDA_MINOR_VERSION = 1
++IDA_MINOR_VERSION = 0
+ IDA_SDK = ".." + os.sep + "swigsdk-versions" + os.sep + "%d.%d" % (IDA_MAJOR_VERSION, IDA_MINOR_VERSION)
+ # End of user configurable options
+ 
+ # IDAPython version
+ VERSION_MAJOR  = 1
+@@ -39,10 +39,13 @@
+ PYTHON_INCLUDE_DIRECTORY = sysconfig.get_config_var('INCLUDEPY')
+ 
+ # Swig command-line parameters
+ SWIG_OPTIONS = '-modern -python -c++ -w451 -shadow -D__GNUC__'
+ 
++VC_CC_OPTIONS_ = "/Ox /Ob2 /Oi /Os /Oy /Zi"
++VC_CL_OPTIONS_ = "/DEBUG /PDB:python.pdb /INCREMENTAL:NO"
++
+ # Common macros for all compilations
+ COMMON_MACROS = [
+     ("VER_MAJOR",  "%d" % VERSION_MAJOR),
+     ("VER_MINOR",  "%d" % VERSION_MINOR),
+     ("VER_PATCH",  "%d" % VERSION_PATCH),
+@@ -228,12 +231,12 @@
+     """ Generic GCC compiler class """
+     def __init__(self):
+         self.include_delimiter = "/I"
+         self.macro_delimiter = "/D"
+         self.libpath_delimiter = "/LIBPATH:"
+-        self.compiler_parameters = "/nologo /EHsc"
+-        self.linker_parameters = "/nologo /dll /export:PLUGIN"
++        self.compiler_parameters = "/nologo /EHsc " + VC_CC_OPTIONS_
++        self.linker_parameters = "/nologo /dll /export:PLUGIN " + VC_CL_OPTIONS_
+         self.basemacros = [ "WIN32",
+                             "_USRDLL",
+                             "__NT__" ]
+         self.compiler = "cl"
+         self.linker = "link"
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/docs/notes-free-1.txt idapython-1.0.0-free-1/docs/notes-free-1.txt
+--- idapython-1.0.0-original/docs/notes-free-1.txt	1970-01-01 01:00:00 +0100
++++ idapython-1.0.0-free-1/docs/notes-free-1.txt	2015-02-19 21:07:25 +0100
+@@ -0,0 +1,8 @@
++2015-02-19 1.0.0-free-1 (DarthGizka)
++   o minimal changes for building IDAPython 1.0.0 against SDK version 5.0 (which is the version of free IDA)
++   o minimal changes for using the plugin with python 2.7.9 instead of 2.5.x (e.g. init.py)
++   o minor tweak to build.py for easy setting of VC compiler/linker options
++   o idaapi.py (generated!) removed from python subdir because build.py drops the new one in the main dir
++   o ansi2idb() set to %ignore in ida.i because the export is missing in newer IDAs; this allows
++     some testing of the unfree 5.0 build even if old versions of IDA are not available
++   o IDB_Hook had to be removed completely since 5.1 hook_type_t(3) == HT_IDB but 5.0 hook_type_t(3) is HT_GRAPH
+Only in idapython-1.0.0-original/python: idaapi.py
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/python/idc.py idapython-1.0.0-free-1/python/idc.py
+--- idapython-1.0.0-original/python/idc.py	2008-09-28 16:57:20 +0200
++++ idapython-1.0.0-free-1/python/idc.py	2015-02-18 11:21:04 +0100
+@@ -855,11 +855,11 @@
+ DOUNK_EXPAND   = idaapi.DOUNK_EXPAND   # propogate undefined items, for example
+                                        # if removing an instruction removes all
+                                        # references to the next instruction, then
+                                        # plan to convert to unexplored the next
+                                        # instruction too.
+-DOUNK_DELNAMES = idaapi.DOUNK_DELNAMES # delete any names at the specified address(es)
++#DOUNK_DELNAMES = idaapi.DOUNK_DELNAMES # delete any names at the specified address(es)
+ 
+ 
+ def OpBinary(ea, n):
+     """
+     Convert an operand of the item (instruction or data) to a binary number
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/python/init.py idapython-1.0.0-free-1/python/init.py
+--- idapython-1.0.0-original/python/init.py	2008-09-28 16:57:20 +0200
++++ idapython-1.0.0-free-1/python/init.py	2015-02-18 11:05:18 +0100
+@@ -16,14 +16,21 @@
+ import time
+ import warnings
+ 
+ import _idaapi
+ 
++# __EA64__ is set if IDA is running in 64-bit mode
++__EA64__ = _idaapi.BADADDR == 0xFFFFFFFFFFFFFFFFL
++
++_idaapi.DOUNK_SIMPLE = 0
++_idaapi.DOUNK_EXPAND = 1
++_idaapi.STRUC_ERROR_MEMBER_OK = 0
++_idaapi.SET_MEMTI_MAY_DESTROY = 1
++
+ # FIXME: Should fix the offending constant instead
+ warnings.filterwarnings('ignore', category=FutureWarning)
+ 
+-
+ def addscriptpath(script):
+     """
+     Add the path part of the scriptfile to the system path to
+     allow modules to be loaded from the same place.
+ 
+@@ -58,20 +65,31 @@
+     argv = sys.argv
+     sys.argv = [ script ]
+     execfile(script, globals())
+     sys.argv = argv
+ 
+-def print_banner():
++def print_banner_v0():
+     version1 = "IDAPython version %d.%d.%d %s (serial %d) initialized" % IDAPYTHON_VERSION
+     version2 = "Python interpreter version %d.%d.%d %s (serial %d)" % sys.version_info
+     linelen  = max(len(version1), len(version2))
+ 
+     print '-' * linelen
+     print version1
+     print version2
+     print '-' * linelen
+ 
++# from 6.4/python/init.py:
++def print_banner():
++    banner = [
++      "Python %s " % sys.version,
++      "IDAPython" + (" 64-bit" if __EA64__ else "") + " v%d.%d.%d %s (serial %d) (c) The IDAPython Team <idapython@googlegroups.com>" % IDAPYTHON_VERSION
++    ]
++    sepline = '-' * (max([len(s) for s in banner])+1)
++
++    print(sepline)
++    print("\n".join(banner))
++    print(sepline)
+ 
+ #-----------------------------------------------------------
+ # Take over the standard text outputs
+ #-----------------------------------------------------------
+ class MyStdOut:
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/python.cpp idapython-1.0.0-free-1/python.cpp
+--- idapython-1.0.0-original/python.cpp	2008-09-28 16:57:20 +0200
++++ idapython-1.0.0-free-1/python.cpp	2015-02-19 20:10:11 +0100
+@@ -32,12 +32,12 @@
+ extern "C"
+ #endif
+ 
+ /* Python-style version tuple comes from the makefile */
+ /* Only the serial and status is set here */
+-#define VER_SERIAL 0
+-#define VER_STATUS "final"
++#define VER_SERIAL 1
++#define VER_STATUS "free beta"
+ 
+ #define IDAPYTHON_RUNFILE      0
+ #define IDAPYTHON_RUNSTATEMENT 1
+ #define IDAPYTHON_SCRIPTBOX    2
+ 
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/swig/ida.i idapython-1.0.0-free-1/swig/ida.i
+--- idapython-1.0.0-original/swig/ida.i	2008-09-28 16:57:20 +0200
++++ idapython-1.0.0-free-1/swig/ida.i	2015-02-19 21:08:39 +0100
+@@ -2,10 +2,11 @@
+ %ignore dual_text_options_t;
+ %ignore init;
+ %ignore retrieve;
+ %ignore read;
+ %ignore write;
++%ignore ansi2idb;
+ 
+ // Make idainfo::get_proc_name() work
+ %cstring_bounded_output(char *buf, 8);
+ 
+ %include "ida.hpp"
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/swig/idp.i idapython-1.0.0-free-1/swig/idp.i
+--- idapython-1.0.0-original/swig/idp.i	2008-09-28 16:57:20 +0200
++++ idapython-1.0.0-free-1/swig/idp.i	2015-02-15 20:59:46 +0100
+@@ -32,10 +32,12 @@
+ %ignore processor_t::u_outspec;
+ %ignore processor_t::is_align_insn;
+ 
+ %include "idp.hpp"
+ 
++#if 0
++
+ %feature("director") IDB_Hooks;
+ 
+ %inline %{
+ 
+ int idaapi IDB_Callback(void *ud, int notification_code, va_list va);
+@@ -249,5 +251,7 @@
+ 	  PyErr_Print();
+ 	}
+     }
+ }
+ %}
++
++#endif
+diff -BEwbur -U 5 --unidirectional-new-file idapython-1.0.0-original/swig/typeinf.i idapython-1.0.0-free-1/swig/typeinf.i
+--- idapython-1.0.0-original/swig/typeinf.i	2008-09-28 16:57:20 +0200
++++ idapython-1.0.0-free-1/swig/typeinf.i	2015-02-15 21:42:26 +0100
+@@ -170,10 +170,15 @@
+ 	return res;
+ }
+ %}
+ 
+ %inline %{
++#ifndef HTI_PAK_SHIFT
++#define HTI_PAK_SHIFT 12
++#define parse_types2(input_, printer_, hti_)  parse_types(input_, (hti_ & HTI_FIL) != 0, printer_)
++#endif
++
+ /* Parse types from a string or file. See ParseTypes() in idc.py */
+ int idc_parse_types(const char *input, int flags)
+ {
+     int hti = ((flags >> 4) & 7) << HTI_PAK_SHIFT;
+ 
