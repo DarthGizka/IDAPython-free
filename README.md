@@ -3,7 +3,7 @@ IDAPython-1.0.0 patches and .def file needed to build for IDA 5.0 free and Pytho
 
 This is proof-of-concept code, to study the feasibility of such a project. IDAPython does not contain any unit tests whatsoever, and the plugin does not (yet) contain any self-tests to keep it from loading in the wrong IDA. With all relevant imports being via ordinal, using the plugin with the wrong IDA is bound to result in a crash.
 
-A pre-built version of the plugin is in misc/idapython-1.0.0_ida5.0_py2.7_win32.zip, which is the standard package produced by the IDAPython-1.0.0 build process. The plugin and its .pdb should go into $(IDADIR)/plugins, and the py files into $(IDADIR)/python. Tested with Python 2.7.9.
+A pre-built version of the plugin is in `misc/idapython-1.0.0_ida5.0_py2.7_win32.zip`, which is the standard package produced by the IDAPython-1.0.0 build process. The plugin and its .pdb should go into `$(IDADIR)/plugins/`, and the py files into `$(IDADIR)/python/`. Tested with Python 2.7.9.
 
 ## Building the plugin
 
