@@ -8,20 +8,20 @@ A pre-built version of the plugin is in misc/idapython-1.0.0_ida5.0_py2.7_win32.
 ## Building the plugin
 
 To build the plugin you'll need the IDAPython 1.0.0 sources, the IDA 5.0 SDK headers, and several tools:
-* [idapython-1.0.0.zip](https://code.google.com/p/idapython/downloads/detail?name=idapython-1.0.0.zip&can=2&q=) https://code.google.com/p/idapython/
-* [swigwin-1.3.36.zip](http://sourceforge.net/projects/swig/files/swigwin/swigwin-1.3.36/) http://www.swig.org
-* [python-2.7.9](https://www.python.org/downloads/release/python-279/) https://www.python.org/
+* [idapython-1.0.0.zip](https://code.google.com/p/idapython/downloads/detail?name=idapython-1.0.0.zip&can=2&q=) from https://code.google.com/p/idapython/
+* [swigwin-1.3.36.zip](http://sourceforge.net/projects/swig/files/swigwin/swigwin-1.3.36/) from http://www.swig.org
+* [python-2.7.9](https://www.python.org/downloads/release/python-279/) from https://www.python.org/
 * GNU-compatible diff/patch (for example those in MinGW's [MSYS](http://www.mingw.org/wiki/MSYS))
 * Visual C++ 2008 (Express)
 * idasdk5.zip 
 
-Follow the instructions in the IDAPython source distro (BUILDING.txt) for setting up the build environment but do not apply ida51.patch since it does not work with the IDA 5.0 headers. Apply ida50.patch to the IDA 5.0 headers which you should have put in
+Follow the instructions in the IDAPython source distro (`BUILDING.txt`) for setting up the build environment but do not apply `ida51.patch` since it does not work with the IDA 5.0 headers. Instead, apply `ida50.patch` to the IDA 5.0 headers which you should have put in
 ```
 swigsdk-versions/5.0/include/
 ```
 according to the build instructions. 
 
-Applying free-1.patch to the IDAPython source requires the -l switch (for ignoring whitespace differences) because the editors I used trashed the tabulation. E.g. if the patches are in the directory that contains idapython-1.0.0/ and swigsdk-versions/:
+Applying free-1.patch to the IDAPython source requires the -l switch (for ignoring whitespace differences) because the editors I used trashed the tabulation. E.g. if the patches are in the directory that contains `idapython-1.0.0/` and `swigsdk-versions/`:
 ```   
 patch -l -i ../../ida50.patch -d swigsdk-versions/5.0/include
 patch -l -i ../free-1.patch -p 1 -d idapython-1.0.0
@@ -39,9 +39,10 @@ Elevating the plugin from proof-of-concept status to a reliable tool requires qu
  * code for keeping the free plugin from loading with the wrong ida.wll
  * a comprehensive test suite (.py files) for the plugin functionality
  * catch up on the advances and bug fixes since the release of IDAPython 1.0.0 seven years ago
-and optionally:
- * add a decent Python/IDC command prompt to IDA free
- * emulate missing functionality on the SDK/C++ level so that the plugin can deal with more of the code written for recent versions of IDA and IDAPython
- * port/migrate to more recent versions of SWIG and VC++
 
-If someone were to take point on this - setting up a mailing list and getting started on the testing thingy - then I'd lend a hand on the C++/SDK side of things.
+Optionally:
+ * add a decent Python/IDC command prompt and a snipped editor to IDA free
+ * emulate missing functionality on the SDK/C++ level so that the plugin can deal with more of the code written for recent versions of IDA and IDAPython
+ * port/migrate to current versions of SWIG and VC++
+
+If someone were to take point on this - setting up a mailing list and getting started on the testing thingy - then I'd lend a hand on the C++ side of things.
